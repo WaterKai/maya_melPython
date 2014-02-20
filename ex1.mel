@@ -1,0 +1,5 @@
+//窗口名字
+$win = "connectBlendUI";
+//判断窗口是否已经存在
+if (`window -exists $win`)
+	deleteUI $win;

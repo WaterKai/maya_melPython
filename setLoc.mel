@@ -1,0 +1,8 @@
+global proc setLoc()
+{
+	string $sels[] = `ls -sl`;
+	//string $locs[] = `spaceLocator`;
+	string $cons[] = `parentConstraint $sels[0] $sels[1]`;
+	setKeyframe $sels[1];
+	delete $cons;
+}

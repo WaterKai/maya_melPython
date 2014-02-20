@@ -1,0 +1,71 @@
+// Copyright (C) 1997-2004 Alias Systems Corp.
+// 
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias license agreement, without fee.
+// 
+// ALIAS DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+
+//
+//  Alias Script File
+//
+//  Creation Date:	June 13, 1997
+//
+//  Procedure Name:
+//	AEmultiWayConstraintTemplate
+//
+//  Description Name;
+//	Creates the attribute editor controls for the multiWayConstraint Node
+//
+//  Input Value:
+//	nodeName 
+//
+//  Output Value:
+//	None
+//
+
+//****************************************************************************************************************
+// THIS IS THE ATTRIBUTE EDITOR TEMPLATE FOR THE MULTI-WAY CONSTRAINT NODE
+//****************************************************************************************************************
+global proc AEmultiWayConstraintTemplate ( string $nodeName )
+{
+   editorTemplate -beginScrollLayout;
+   
+      editorTemplate -beginLayout "Multi-Way Constraint Attributes" -collapse 0;
+      
+         // INPUTS
+         editorTemplate -beginLayout "Inputs";
+            editorTemplate -addControl "drivers";
+            editorTemplate -addControl "drivens";
+            editorTemplate -addControl "animation";
+            editorTemplate -addControl "nodeRotateOrder";
+         editorTemplate -endLayout;
+         
+         // OFFSETS
+         editorTemplate -beginLayout "Offset";
+            editorTemplate -addControl "translateOffset";
+            editorTemplate -addControl "rotateOffset";
+         editorTemplate -endLayout;   
+         
+         // OUTPUTS
+         editorTemplate -beginLayout "Outputs" -collapse 0;
+            editorTemplate -addControl "constrain";
+            editorTemplate -addControl "constrainTranslate";
+            editorTemplate -addControl "constrainRotate";
+         editorTemplate -endLayout;
+      
+      editorTemplate -endLayout;
+   
+      // include/call base class/node attributes
+      AEabstractBaseCreateTemplate $nodeName;
+   
+      editorTemplate -addExtraControls;
+   editorTemplate -endScrollLayout;
+}

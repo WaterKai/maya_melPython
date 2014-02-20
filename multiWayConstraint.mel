@@ -1,0 +1,885 @@
+//multiWayConstraintCmb
+//Author: Andrea Maiolo, Tim Naylor
+
+global proc multiWayConstraint (string $transMaster, string $rotMaster, string $Slaves[])
+{
+  // load the plugin if is not already loaded
+  if (!`pluginInfo -q -l multiWayConstraint`) loadPlugin multiWayConstraint;
+  
+  //disable cycle warning
+  cycleCheck -e off;
+  
+  // if no masters exits
+  if (($transMaster == 0) && ($rotMaster == 0)) {warning "NOTHING TO DO!";return;}
+  
+  // check that masters and slaves are attached to the same constrain
+  string $MastersArray[];
+  $MastersArray[0] = $transMaster; $MastersArray[1] = $rotMaster;
+  int $retStat = allSameConstrain ($MastersArray);
+  // if different exit
+  if ($retStat == 0) error ($transMaster+" and "+$rotMaster+" are attached to two differend constraint");
+  
+  // create an array with all the slaves and masters
+  string $completeList[] = $Slaves;
+  if (size($completeList) == 0)
+  {
+    // find the constraint attached to the passed objects
+    string $constName;
+    if ($transMaster != "") $constName = findConstrainFromObject ($transMaster);
+    if ($rotMaster != "") $constName = findConstrainFromObject ($rotMaster);
+    if ($constName == "") error "can not find constraint attached to passed objects";
+    // find the all objects attached to the constraint
+    $completeList = findObjectsFromConstraint ($constName);
+    $completeList[size($completeList)] = $transMaster;
+    $completeList[size($completeList)] = $rotMaster;
+  }
+  if (size($completeList) == 0) error "one or less objects are attached to the constraint";
+  
+  // this variable will hold the name of the multiWayConstraint node
+  string $constrName = "";
+  
+  // loop through all the objects included masters and slaves
+  for ($object in $completeList)
+  {
+    // find first constraint
+    $constrName = findConstrainFromObject ($object);
+    if ($constrName != "") break;
+  }
+  
+  // if a multiwayconstraint doesn't exist attached to any of the selected nodes create one
+  if ($constrName == "") $constrName = `createNode multiWayConstraint`;
+  
+  //if MASTER Trans != ""
+  if ($transMaster != "")
+  {
+    // find the constrain attached to the current master
+    string $connConst = findConstrainFromObject ($transMaster);
+    
+    // if MASTER Trans is attached to a different constr detach it
+    if ($connConst != $constrName)
+    {
+      int $retStatus = disconnectObjectFromConstraint($transMaster, $connConst, "both");
+      if (!$retStatus) error ("failed to disconnect "+$transMaster+" from "+$connConst);
+    }
+    
+    // if MASTER Trans is not attached to the current constr
+    if (($connConst == "") || ($connConst != $constrName))
+    {
+      // GET THE TRANSLATION IN WORLD SPACE OF THE TRANSLATION MASTER. We have to do this to go around a "cycle problem.
+      float $translOrig[3] = `getAttr ($transMaster+".translate")`;
+      //attach  it
+      int $connPlugNum = connectNodetoConstrain ($transMaster, $constrName, $translOrig, {});
+      if ($connPlugNum == -1) error ("failed to connect "+$transMaster+" to "+$constrName);
+    }
+    
+    // add trans master as master
+    int $retStatus = setMaster ($transMaster, "Translate");
+    if (!$retStatus) error ("failed to set "+$transMaster+" as Translation Master");
+  }
+  
+  //if MASTER Rot != ""
+  if ($rotMaster != "")
+  {
+    // find the constrain attached to the current master
+    string $connConst = findConstrainFromObject ($rotMaster);
+    
+    // if MASTER Rot is attached to a different constr detach it
+    if ($connConst != $constrName)
+    {
+      int $retStatus = disconnectObjectFromConstraint($rotMaster, $connConst, "both");
+      if (!$retStatus) error ("failed to disconnect "+$transMaster+" from "+$connConst);
+    }
+    
+    // if MASTER Rot is not attached to the current constr
+    {
+      // GET THE Rotation IN WORLD SPACE OF THE TRANSLATION MASTER. We have to do this to go around a "cycle problem.
+      float $rotOrig[3] = `getAttr ($rotMaster+".rotate")`;
+      //attach  it
+      int $connPlugNum = connectNodetoConstrain ($rotMaster, $constrName, {}, $rotOrig);
+      if ($connPlugNum == -1) error ("failed to connect "+$rotMaster+" to "+$constrName);
+    }
+    
+    // add rot master as master
+    int $retStatus = setMaster ($rotMaster, "Rotate");
+    if (!$retStatus) error ("failed to set "+$rotMaster+" as Rotation Master");
+  }
+  
+  // if only MASTERS are passed to the function and they are both connected to the multiWay Constraint it mean that the user want the system
+  // to figure out the slaves automatically
+  if (size($Slaves) == 0)
+  {
+    // GET THE TOTAL NUMBER OF OBJ ATTACHED TO CONSTRAIN
+    string $objConnected[] = `findObjectsFromConstraint ($constrName)`;
+    
+    // remove Masters from list
+    $objConnected = removeMstrFromObjs ($transMaster, $rotMaster, $objConnected);
+    
+    int $slaveNbr = 0;
+    // LOOP THROUGH ALL THE ATTACHED OBJECTS
+    for ($object in $objConnected)
+    {
+      // these variables will store the offsets between masters and slaves
+      float $transOff[3];float $rotOff[3];
+      
+      // calculate translation offset
+      if ($transMaster != "") $transOff = computeTransOffset ($transMaster, $object);
+      
+      // calculate rotation offset
+      if ($rotMaster != "") $rotOff = computeRotOffset ($rotMaster, $object);
+      
+      // SET IT TO BE A SLAVE
+      int $retStatus = setSlave ($object, $transMaster, $rotMaster, $transOff, $rotOff, $slaveNbr);
+      if (!$retStatus) error ("failed to set "+$object+" as Slave");
+      $slaveNbr++;
+    }
+  }
+  else // IF ALL THE Slaves have been specified
+  {
+    // remove Masters from SLAVES list
+    string $objConnected[] = removeMstrFromObjs ($transMaster, $rotMaster, $Slaves);
+    
+    int $slaveNbr = 0;
+    //Loop through all the Slave objects
+    for ($object in $objConnected)
+    {
+      // these variables will store the offsets between masters and slaves
+      float $transOff[3];float $rotOff[3];float $WStransOff[3];float $WSrotOff[3];
+      
+      // calculate translation offset
+      if ($transMaster != "")
+      {
+        $transOff = computeTransOffset ($transMaster, $object);
+        $WStransOff = getAttr ($object+".translate");
+      }
+      // calculate rotation offset
+      if ($rotMaster != "")
+      {
+        $rotOff = computeRotOffset ($rotMaster, $object);
+        $WSrotOff = getAttr ($object+".rotate");
+      }
+      
+      // if node not connected
+      string $connConstr = findConstrainFromObject ($object);
+      if ($connConstr == "")
+      {
+        // connect the node to the first available plug
+        int $retStatus = connectNodetoConstrain ($object, $constrName, $WStransOff, $WSrotOff);
+        if (!$retStatus) error ("failed to connect "+$object+" to "+$constrName);
+      }
+      
+      //add slave as slave
+      int $retStatus = setSlave ($object, $transMaster, $rotMaster, $transOff, $rotOff, $slaveNbr);
+      if (!$retStatus) error ("failed to set "+$object+" as Slave");
+      
+      $slaveNbr++;
+    }
+  }
+  
+  // enable the pair blends
+  enablePairBlends $constrName;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure return the plug number given an object and a multiWay Constraint
+global proc int findPlugFromNodes (string $object, string $constrain)
+{
+  int $plugNum = -1;
+  
+  string $constPlug[] = `listConnections -p 1 -scn 1  ($object+".matrix")`;
+  // tokenize the attribute name to extract the plug number
+  string $buf[];
+  tokenize $constPlug[`size($constPlug)`-1] "[\]" $buf;
+  $plugNum = int ($buf[1]);
+  
+  return $plugNum;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure return the plug number given an object if it is connected to a  multiWay Constraint
+global proc int findPlugFromObject (string $object)
+{
+  // the name of the multiWay Constrain attached to the passed object
+  string $constraintName = "";
+  
+  // this variable will hold the number of the plug of the multiWay constrain in wich the current object is connected
+  int $plugNum = -1;
+  
+  string $constraintName = `findConstrainFromObject ($object)`;
+  
+  if ($constraintName != "") $plugNum = findPlugFromNodes ($object, $constraintName);
+  
+  return $plugNum;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure return the multiWay Constraint attached to the current object
+global proc string findConstrainFromObject (string $object)
+{
+  // if the object is not an empty string
+  if ($object != "")
+  {
+    string $constPlug[] = `listConnections -p 1 -scn 1  ($object+".matrix")`;
+    
+    // tokenize the attribute name to extract the node name
+    string $nameBuf[];
+    tokenize $constPlug[0] "." $nameBuf;
+    string $constraintName =$nameBuf[0];
+    
+    if ($constraintName != "")
+    {
+      if (`objectType $constraintName` == "multiWayConstraint") return $constraintName;
+    }
+  }
+  return "";
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure return all the objects attached to a multiWay Constraint
+global proc string[] findObjectsFromConstraint (string $constraintName)
+{
+  string $connNodes[];
+  // check that the passed object really is a multiwayConstraint
+  if (`objectType $constraintName` != "multiWayConstraint") {warning ("findObjectsFromConstraint: "+$constraintName+" is not a multiWayConstraint");return $connNodes;}
+  
+  // GET THE TOTAL NUMBER OF OBJ ATTACHED TO THE CONSTRAIN
+  $connNodes = `listConnections ($constraintName+".nodeMatrix")`;
+  
+  return $connNodes;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure attach a node to the first available plug of a multiWay Constraint and return the plug number
+global proc int connectNodetoConstrain (string $object, string $constraintName, float $translOrig[], float $rotOrig[])
+{
+  // check that the passed object really is a multiwayConstraint
+  if (`objectType $constraintName` != "multiWayConstraint") {warning ("connectNodetoConstrain: "+$constraintName+" is not a multiWayConstraint"); return -1;}
+  
+  // fing the constraint attached to the current object
+  string $currentConst = findConstrainFromObject ($object);
+  
+  // if the current object is already connected to an other multiwayConstrain disconnect it
+  if ($currentConst != $constraintName) disconnectObjectFromConstraint($object, $currentConst, "both");
+  
+  //find the first available plug in the constraint
+  $plugNum = -1;
+  string $res[] = `listConnections -c 1 -scn 1 ($constraintName+".nodeMatrix")`;
+  
+  int $lastconnum = `size ($res)`;
+  if ($lastconnum != 0)
+  {
+    // tokenize the attribute name to extract the plug number
+    string $buf[];
+    tokenize $res[$lastconnum-2] "[\]" $buf;
+    $plugNum = int ($buf[1]);
+    // first available plug
+    $plugNum += 1;
+  }
+  else
+  {
+    $plugNum = 0;
+  }
+  
+  if ($plugNum == -1) { warning ("connectNodetoConstrain: first available plug in "+$constraintName+" can not be found\n"); return -1;}
+  
+  // check what is connected to the matrix Attr of the current object
+  string $connectedNode[] = `listConnections ($object+".matrix")`;
+  
+  // If the object is not connected to the current multiWayConstraint connect it
+  if ($connectedNode[0] !=$constraintName)
+  {
+    // CONNECT THE WORLD MATRIX OF THE NODE TO THE nodeMatrix ATTRIBUTE ON THE CONSTRAINT
+    connectAttr ($object+".matrix") ($constraintName+".nodeMatrix["+$plugNum+"]");
+    
+    // CONNECT THE PARENT INVERSE MATRIX OF THE NODE TO THE nodeParentMatrix ATTRIBUTE ON THE CONSTRAINT
+    connectAttr ($object+".parentInverseMatrix") ($constraintName+".nodeParentMatrix["+$plugNum+"]");
+    
+    
+    // CONNECT THE ROTATEPIVOT OF THE NODE WITH THE constrainRotatePivot ATTRIBUTE ON THE CONSTRAINT
+    connectAttr ($object+".rotatePivot") ($constraintName+".RotatePivot["+$plugNum+"]");
+    
+    // CONNECT THE ROTATEORDER OF THE NODE WITH THE constrainRotateOrder ATTRIBUTE ON THE CONSTRAINT
+    connectAttr ($object+".rotateOrder") ($constraintName+".RotateOrder["+$plugNum+"]");
+    
+    // CONNECT THE ROTATEPIVOTTRANSLATE OF THE NODE WITH THE constrainRotateTranslate ATTRIBUTE ON THE CONSTRAINT
+    connectAttr ($object+".rotatePivotTranslate") ($constraintName+".RotateTranslate["+$plugNum+"]");
+    
+    // check what is connected to the translate attr of the current object
+    string $MoveNode[] = `listConnections ($object+".translate")`;
+    // if a pair blend is missing create and connect one
+    if ((size ($MoveNode) == 0) || (size ($MoveNode) != 0) && (`objectType $MoveNode` != "pairBlend"))
+    {
+      $pairBlendNode = `createNode pairBlend`;
+      setAttr ($pairBlendNode+".translateXMode") 1;
+      setAttr ($pairBlendNode+".translateYMode") 1;
+      setAttr ($pairBlendNode+".translateZMode") 1;
+      setAttr ($pairBlendNode+".rotateMode") 1;
+      setAttr ($pairBlendNode+".nodeState") 2;
+      
+      connectAttr -f ($constraintName+".constrain["+$plugNum+"].constrainTranslate") ($pairBlendNode+".inTranslate1");
+      connectAttr -f ($constraintName+".constrain["+$plugNum+"].constrainRotate") ($pairBlendNode+".inRotate1");
+      connectAttr -f ($pairBlendNode+".outTranslate") ($object+".translate");
+      connectAttr -f ($pairBlendNode+".outRotate") ($object+".rotate");
+    }
+    
+    // set back the object in its initial translation before it was getting connected
+    if (size ($translOrig) != 0) setAttr ($constraintName+".constrain["+$plugNum+"].constrainTranslate") $translOrig[0] $translOrig[1] $translOrig[2];
+    // set back the object in its initial rotation before it was getting connected
+    if (size ($rotOrig) != 0) setAttr ($constraintName+".constrain["+$plugNum+"].constrainRotate") $rotOrig[0] $rotOrig[1] $rotOrig[2];
+  }
+  return $plugNum;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure set the passed object to be a SLAVE
+global proc int setSlave (string $object, string $TransMaster, string $RotMaster, float $transOff[], float $rotOff[], int $slaveIdx)
+{
+  string $constraintName = `findConstrainFromObject $object`;
+  if ($constraintName == "") {warning ("can not find a multiWayConstrain Attached to "+$object); return 0;}
+  
+  // find current object plug
+  $plugNum = findPlugFromNodes ($object, $constraintName);
+  if ($plugNum == -1) {warning ("connection between " + $object + " and " + $constraintName + " can not be found\n"); return 0;}
+  
+  // if both Translation Master and Rotation Master are null return an error
+  if (($TransMaster == "") && ($RotMaster == "")) {warning "setSlave: slave can not be set because both Translation Master and rotation Master are empty"; return 0;}
+  
+  if ($TransMaster != "")
+  {
+    // set the translation offset in the multiway constrain for the current object
+    setAttr ($constraintName+".Offset["+$plugNum+"].translateOffsetX") $transOff[0];
+    setAttr ($constraintName+".Offset["+$plugNum+"].translateOffsetY") $transOff[1];
+    setAttr ($constraintName+".Offset["+$plugNum+"].translateOffsetZ") $transOff[2];
+  }
+  
+  if ($RotMaster != "")
+  {
+    // set the rotation offset in the multiway constrain for the current object
+    setAttr ($constraintName+".Offset["+$plugNum+"].rotateOffsetX") ($rotOff[0]/57.295779513082320876798154814105);
+    setAttr ($constraintName+".Offset["+$plugNum+"].rotateOffsetY") ($rotOff[1]/57.295779513082320876798154814105);
+    setAttr ($constraintName+".Offset["+$plugNum+"].rotateOffsetZ") ($rotOff[2]/57.295779513082320876798154814105);
+  }
+  
+  string $Masters[] = {$TransMaster, $RotMaster};
+  int $isSlaveParent = disableifSlaveParent ($Masters, $object);
+  
+  // set the attribute that specify wich Plug in the constraint is a slave plug
+  // if the slave if a parent of one of the master disable it to prevent double transformation
+  if ($isSlaveParent == 0) setAttr ($constraintName+".drivens["+$slaveIdx+"]") $plugNum;
+  else setAttr ($constraintName+".drivens["+$slaveIdx+"]") -1;
+  
+  return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure set the passed object to be a Translation or Rotation MASTER
+// $type can be: "Translate" or "Rotate"
+global proc int setMaster (string $object, string $type)
+{
+  if (($type != "Translate") && ($type != "Rotate")) {warning "setMaster: wrong Master type. Master need to be \"Translate\" or \"Rotate\""; return 0;}
+  
+  // find the plug number for the current object
+  int $plugNum = findPlugFromObject ($object);
+  if ($plugNum == -1) {warning ("setMaster: failed to retrieve the plug number for "+$object); return 0;}
+  
+  // find the constrain name from the object
+  string $constraintName = findConstrainFromObject ($object);
+  if ($constraintName == "") {warning ("setMaster: failed to retrieve the name of the multiwayConstrain attached to "+$object); return 0;}
+  
+  // set the Translation Master
+  if ($type == "Translate")
+  {
+    setAttr ($constraintName+".drivers[0]") $plugNum;
+    
+    // GET THE SLAVE TRANSLATION IN WORLD SPACE
+    $transOff = `xform -q -ws -t $object`;
+    
+    // set the translation offset in the multiway constrain for the current object
+    setAttr ($constraintName+".Offset["+$plugNum+"].translateOffsetX") $transOff[0];
+    setAttr ($constraintName+".Offset["+$plugNum+"].translateOffsetY") $transOff[1];
+    setAttr ($constraintName+".Offset["+$plugNum+"].translateOffsetZ") $transOff[2];
+  }
+  
+  // set the Rotation Master
+  if ($type == "Rotate")
+  {
+    setAttr ($constraintName+".drivers[1]") $plugNum;
+    
+    // GET THE CURRENT NODE ROTATION IN WORLD SPACE
+    float $rotOff[3] = `xform -q -ws -ro $object`;
+    
+    // set the rotation offset in the multiway constrain for the current object
+    setAttr ($constraintName+".Offset["+$plugNum+"].rotateOffsetX") ($rotOff[0]/57.295779513082320876798154814105);
+    setAttr ($constraintName+".Offset["+$plugNum+"].rotateOffsetY") ($rotOff[1]/57.295779513082320876798154814105);
+    setAttr ($constraintName+".Offset["+$plugNum+"].rotateOffsetZ") ($rotOff[2]/57.295779513082320876798154814105);
+  }
+  
+  return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure return the Translation offset between a MASTER and a SLAVE
+global proc float[] computeTransOffset (string $master, string $slave)
+{
+  // GET THE SLAVE TRANSLATION IN WORLD SPACE
+  float $slaveTrans[3] = `xform -q -ws -t $slave`;
+  
+  float $transOff[3] = {$slaveTrans[0],$slaveTrans[1],$slaveTrans[2]};
+  
+  return $transOff;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure return the Rotation offset between a MASTER and a SLAVE
+global proc float[] computeRotOffset (string $master, string $slave)
+{
+  // GET THE CURRENT NODE ROTATION IN WORLD SPACE
+  float $slaveRot[3] = `xform -q -ws -ro $slave`;
+  
+  float $rotOff[3] = {$slaveRot[0],$slaveRot[1],$slaveRot[2]};
+  
+  return $rotOff;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//this proceture check that all the object passed to it are transform and are not attached to a MV constraint or attached to the same multiWay Constraint
+global proc int allSameConstrain (string $listOfObjects[])
+{
+  // the name of the multiWayConstrain
+  string $constraintName = "";
+  
+  // loop through all the passed objects
+  for ($object in $listOfObjects)
+  {
+    // if object is not an empty string
+    if ($object != "")
+    {
+      //check that the current objects is transforms
+      if ((`objectType $object` != "transform") && (`objectType $object` != "joint")) {warning "only transforms and Joint can be constrained"; return 0;}
+      
+      // fing the constraint attached to the current object
+      $cunnentConst = findConstrainFromObject ($object);
+      // if someting is connected and a contraint wasn't previously found set $constraintName to have the name of the constraint
+      if (($cunnentConst != "") && ($constraintName == "")) $constraintName = $cunnentConst;
+      // if someting is connected and a contraint was previously found and the two constraint are differend return "false"
+      if (($cunnentConst != "") && ($constraintName != "") && ($cunnentConst != $constraintName)) return 0;
+    }
+  }
+  
+  //return "true"
+  return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//this procedure remove masters form a the list of objects
+global proc string[] removeMstrFromObjs (string $TransMaster, string $RotMaster, string $objects[])
+{
+  // this array will store a list object where the two masters where removed
+  string $cloanList[];
+  
+  // loop through all the objects
+  for ($object in $objects)
+  {
+    if (($object != $TransMaster) && ($object != $RotMaster)) $cloanList[size($cloanList)] = $object;
+  }
+  
+  // return the clean list
+  return $cloanList;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//this procedure connect an object to a multiWayConstrain
+global proc int disconnectObjectFromConstraint(string $object, string $constraintName, string $attr)
+{
+  // if the passed constrain is not an empty string
+  if ($constraintName != "")
+  {
+    // check that the passed object really is a multiwayConstraint
+    if (`objectType $constraintName` != "multiWayConstraint") {warning ("disconnectObjectFromConstraint: "+$constraintName+" is not a multiWayConstraint"); return 0;}
+    
+    // fing the constraint attached to the current object
+    string $currentConst = findConstrainFromObject ($object);
+    
+    // if the current object is not connected to the passed constraint
+    if ($currentConst != $constraintName)
+    {
+      warning ($object+" is not attached to the multiwayConstrain "+$constraintName);
+      return 0;
+    }
+    
+    // If the object is not connected to the current multiWayConstraint disconnect it
+    else
+    {
+      // find the current plug number for this object
+      $plugNum = findPlugFromObject ($object);
+      
+      // DISCONNECT THIS OBJECT FROM EITHER THE DRIVERS OR DRIVENS ATTRIBUTE ON THE CONSTRAINT
+      // TO DO THIS FIRST GET A LIST OF THE INDEX ITEMS IN THE DRIVERS AND DRIVENS ARRAY
+      // THEN FOR EACH ITEM IN THE ARRAY SEE IF THAT NUMBER MATCHES THE PLUG NUMBER
+      // IF IT DOES THEN WE KNOW THIS OBJECT IS EITHER A DRIVER OR DRIVEN NODE AND WILL DISCONNECT THE CORRECT ATTRIBUTE
+      //---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      int $stop = 0;
+      float$drivers[] = `getAttr ($constraintName+".drivers")`;
+      float $drivens[] = `getAttr ($constraintName+".drivens")`;
+      
+      
+      // LOOP THROUGH THE DRIVERS
+      for ($i=0; $i<size($drivers); $i++){
+        if ($drivers[$i] == $plugNum){
+          removeMultiInstance ($constraintName+".drivers["+$i+"]");
+          $stop = 1;
+          break;
+        }
+      }
+      
+      // IF WE OBJECT IS NOT A DRIVER LOOP THROUGH THE DRIVEN NODES
+      if ($stop == 0){
+        for ($i=0; $i<size($drivens); $i++){
+          if ($drivens[$i] == $plugNum){
+            removeMultiInstance ($constraintName+".drivens["+$i+"]");
+            break;
+          }
+        }
+      }
+      
+      // MAKE THE PROPER DISCONNECTIONS BASED ON THE INCOMING ATTRIBUTE
+      //---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      string $pairBlendNode[];
+      if ($attr == "translate"){
+        // DISCONNECT THE TRANSLATE ATTRIBUTES ON THE CONSTRAINT AND PAIR BLEND NODE
+        $pairBlendNode = `listConnections ($object+".translate")`;
+        disconnectAttr ($constraintName+".constrain["+$plugNum+"].constrainTranslate") ($pairBlendNode[0]+".inTranslate1");
+        disconnectAttr ($pairBlendNode[0]+".outTranslate") ($object+".translate");
+      }
+      
+      if ($attr == "rotate"){
+        // DISCONNECT THE ROTATION ATTRIBUTES ON THE CONSTRAINT AND PAIR BLEND NODE
+        $pairBlendNode = `listConnections ($object+".rotate")`;
+        disconnectAttr ($constraintName+".constrain["+$plugNum+"].constrainRotate") ($pairBlendNode[0]+".inRotate1");
+        disconnectAttr ($pairBlendNode[0]+".outRotate") ($object+".rotate");
+      }
+      if ($attr == "both"){
+        // DISCONNECT THE WORLD MATRIX OF THE NODE FROM THE nodeMatrix ATTRIBUTE ON THE CONSTRAINT
+        disconnectAttr ($object+".matrix") ($constraintName+".nodeMatrix["+$plugNum+"]");
+        
+        // DISCONNECT THE PARENT INVERSE MATRIX OF THE NODE FROM THE nodeParentMatrix ATTRIBUTE ON THE CONSTRAINT
+        disconnectAttr ($object+".parentInverseMatrix") ($constraintName+".nodeParentMatrix["+$plugNum+"]");
+        
+        // FIND THE PAIR BLEND NODE CONNECTED TO THE NODE
+        $pairBlendNode = `listConnections ($object+".translate")`;
+        
+        if (`size($pairBlendNode)` == 0)
+          $pairBlendNode = `listConnections($object+".rotate")`;
+        
+        // DISCONNECT THE ATTRIBUTES AND REMOVE THE PAIR BLEND NODE
+        disconnectAttr ($constraintName+".constrain["+$plugNum+"].constrainTranslate") ($pairBlendNode[0]+".inTranslate1");
+        disconnectAttr ($pairBlendNode[0]+".outTranslate") ($object+".translate");
+        disconnectAttr ($constraintName+".constrain["+$plugNum+"].constrainRotate") ($pairBlendNode[0]+".inRotate1");
+        disconnectAttr ($pairBlendNode[0]+".outRotate") ($object+".rotate");
+        
+        // CLEAN UP - DELETE ANY PAIR BLEND NODE THAT EXISTS AND REMOVE THE INDEX ITEM FROM THE "drivers" ATTRIBUTE
+        // REMOVE THE PAIR BLEND NODE
+        if (`objectType $pairBlendNode[0]` == "pairBlend")
+          delete $pairBlendNode[0];
+        
+        // REMOVE ANY DRIVER PLUGS
+        string $driversLeft[] = `listAttr -m -st "drivers" $constraintName`;
+        removeMultiInstance ($constraintName+"."+$driversLeft[0]);
+      }
+      
+      // ############## I SHOULD TAKE CARE OF EXISTING ANIMATION HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    }
+  }
+  
+  // return success
+  return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure enable all the pairBlends connected to a multiWay Constraint
+global proc int enablePairBlends (string $constraintName)
+{
+  string $histNodes[] = `listHistory $constraintName`;
+  for ($nodes in $histNodes)
+  {
+    if (`objectType $nodes` == "pairBlend") setAttr ($nodes+".nodeState") 0;
+  }
+  
+  return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure set keyframes to the objects attached to a multiway constrain
+global proc setMultiWayKeyframe (string $object, int $setTrans, int $setRot)
+{
+  int $plugNum = -1;
+  
+  // find out if the passed object is attached to a multiWay constraint
+  $plugNum = `findPlugFromObject $object`;
+  
+  // if the node is attached to a multiWayConstraint
+  if ($plugNum != -1)
+  {
+    float $transl[3] = `getAttr ($object+".translate")`;
+    float $rot[3] = `getAttr ($object+".rotate")`;
+    
+    string $constraintName = "";
+    
+    string $constPlug[] = `listConnections -p 1 -scn 1  ($object+".matrix")`;
+    
+    // tokenize the attribute name to extract the node name
+    string $nameBuf[];
+    tokenize $constPlug[0] "." $nameBuf;
+    $constraintName = $nameBuf[0];
+    
+    // if the procedure has been instructed to set translation
+    if ($setTrans ==1)
+    {
+      setKeyframe -at ("animation["+$plugNum+"].animTranslateX") -v $transl[0] $constraintName;
+      setKeyframe -at ("animation["+$plugNum+"].animTranslateY") -v $transl[1] $constraintName;
+      setKeyframe -at ("animation["+$plugNum+"].animTranslateZ") -v $transl[2] $constraintName;
+    }
+    // if the procedure has been instructed to set rotation
+    if ($setRot ==1)
+    {
+      setKeyframe -at ("animation["+$plugNum+"].animRotateX") -v $rot[0] $constraintName;
+      setKeyframe -at ("animation["+$plugNum+"].animRotateY") -v $rot[1] $constraintName;
+      setKeyframe -at ("animation["+$plugNum+"].animRotateZ") -v $rot[2] $constraintName;
+    }
+    
+    // find out what was the driver at the previous keyframe
+    float $prevDriverFrame = `findKeyframe  -at drivers -which previous $constraintName`;
+    float $prevMasters[] = `keyframe -a -t $prevDriverFrame -q -vc ($constraintName+".drivers")`;
+    
+    //SET ALL THE MASTERS
+    float $listOfMasters[] = `getAttr ($constraintName+".drivers")`;
+    for ($master=0; $master<size($listOfMasters); $master++)
+      setKeyframe -at ("drivers["+$master+"]") -ott "step" -v $listOfMasters[$master] $constraintName;
+    
+    //SET ALL THE SLAVES
+    float $listOfSlaves[] = `getAttr ($constraintName+".drivens")`;
+    for ($slave=0; $slave<size($listOfSlaves); $slave++)
+      setKeyframe -at ("drivens["+$slave+"]") -ott "step" -v $listOfSlaves[$slave] $constraintName;
+    
+    // SET OFFSET
+    //get all the objects attached to the multiway Constraint
+    string $connObjects[] = findObjectsFromConstraint ($constraintName);
+    for ($object in $connObjects)
+    {
+      int $plugNum = `findPlugFromObject $object`;
+      // if the driver didn't changed set a keyframe for the offset on the old value
+      print ("comparing "+$prevMasters[0]+" with "+$listOfSlaves[0]+"\n");
+      if ($prevMasters[0] == $listOfMasters[0])
+      {
+        setKeyframe -at ("Offset["+$plugNum+"].translateOffsetX") -ott "step" -v `getAttr ($constraintName+".Offset["+$plugNum+"].translateOffsetX")` $constraintName;
+        setKeyframe -at ("Offset["+$plugNum+"].translateOffsetY") -ott "step" -v `getAttr ($constraintName+".Offset["+$plugNum+"].translateOffsetY")` $constraintName;
+        setKeyframe -at ("Offset["+$plugNum+"].translateOffsetZ") -ott "step" -v `getAttr ($constraintName+".Offset["+$plugNum+"].translateOffsetZ")` $constraintName;
+        setKeyframe -at ("Offset["+$plugNum+"].rotateOffsetX") -ott "step" -v `getAttr ($constraintName+".Offset["+$plugNum+"].rotateOffsetX")` $constraintName;
+        setKeyframe -at ("Offset["+$plugNum+"].rotateOffsetY") -ott "step" -v `getAttr ($constraintName+".Offset["+$plugNum+"].rotateOffsetY")` $constraintName;
+        setKeyframe -at ("Offset["+$plugNum+"].rotateOffsetZ") -ott "step" -v `getAttr ($constraintName+".Offset["+$plugNum+"].rotateOffsetZ")` $constraintName;
+      }
+      else
+      {
+        float $objectTranslate[] = `xform -q -ws -t $object`;
+        setKeyframe -at ("Offset["+$plugNum+"].translateOffsetX") -ott "step" -v $objectTranslate[0] $constraintName;
+        setKeyframe -at ("Offset["+$plugNum+"].translateOffsetY") -ott "step" -v $objectTranslate[1] $constraintName;
+        setKeyframe -at ("Offset["+$plugNum+"].translateOffsetZ") -ott "step" -v $objectTranslate[2] $constraintName;
+        
+        float $objectRotate[] =`xform -q -ws -ro $object`;
+        setKeyframe -at ("Offset["+$plugNum+"].rotateOffsetX") -ott "step" -v $objectRotate[0] $constraintName;
+        setKeyframe -at ("Offset["+$plugNum+"].rotateOffsetY") -ott "step" -v $objectRotate[1] $constraintName;
+        setKeyframe -at ("Offset["+$plugNum+"].rotateOffsetZ") -ott "step" -v $objectRotate[2] $constraintName;
+      }
+    }
+  }
+  else performSetKeyframeArgList 1 {"0", "animationList"};
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure get the list of Slaves from an object connected to a MW Constraint or from the constraint itself
+global proc string[] MWgetSlaves (string $object)
+{
+  //List of driving objects
+  string $drivenNodes[];
+  
+  // if the selection is not empty
+  if ($object != "")
+  {
+    // find the constrain from the selected object
+    $constName = findConstrainFromObject ($object);
+    if (`objectType $object` == "multiWayConstraint") $constName = $object;
+    
+    // if the object is attached to a MWC
+    if ($constName != "")
+    {
+      float $slaves[] = `getAttr ($constName+".drivens")`;
+      for ($node =0;$node<size($slaves);$node++)
+      {
+        // if the object is not disabled
+        if ($slaves[$node] != -1)
+        {
+          $drvType = `getAttr ($constName+".drivens["+$node+"]")`;
+          string $masterNodes[] = `listConnections ($constName+".nodeMatrix["+$slaves[$node]+"]")`;
+          $drivenNodes[size($drivenNodes)] = $masterNodes[0];
+        }
+      }
+      print ("Objects driven by "+$constName+": \n");
+      print $drivenNodes;
+      print "\n";
+    }
+  }
+  
+  return $drivenNodes;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure get the list of Masters from an object connected to a MW Constraint or from the constraint itself
+global proc string[] MWgetMasters (string $object)
+{
+  //List of driving objects
+  string $drivingNodes[];
+  
+  // if the selection is not empty
+  if ($object != "")
+  {
+    // find the constrain from the selected object
+    $constName = findConstrainFromObject ($object);
+    if (`objectType $object` == "multiWayConstraint") $constName = $object;
+    
+    // if the object is attached to a MWC
+    if ($constName != "")
+    {
+      float $masters[] = `getAttr ($constName+".drivers")`;
+      for ($node =0;$node<size($masters);$node++)
+      {
+        string $masterNodes[] = `listConnections ($constName+".nodeMatrix["+$masters[$node]+"]")`;
+        $drvType = `getAttr ($constName+".drivers["+$node+"]")`;
+        if (($node == 0) && ($drvType != -1))
+        {
+          print ("Translation driver for "+$constName+" is: "+$masterNodes[0]+"\n");
+          $drivingNodes[size($drivingNodes)] = $masterNodes[0];
+        }
+        if (($node == 1) && ($drvType != -1))
+        {
+          print ("Rotation driver for "+$constName+" is: "+$masterNodes[0]+"\n");
+          $drivingNodes[size($drivingNodes)] = $masterNodes[0];
+        }
+      }
+    }
+  }
+  
+  return $drivingNodes;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure print the offset of the Slaves from an object connected to a MW Constraint or from the Constraint itself
+global proc MWprintOffset (string $object)
+{
+  // if the selection is not empty
+  if ($object != "")
+  {
+    // find the constrain from the selected object
+    $constName = findConstrainFromObject ($object);
+    if (`objectType $object` == "multiWayConstraint") $constName = $object;
+    if ($constName != "")
+    {
+      // get number of nodes attached to the system
+      $numOfObjConn = `getAttr -s ($constName+".constrain")`;
+      
+      // get the MASTERS
+      //print "\n### MASTER OFFSET VALUE:\n";
+      float $driver[] = `getAttr multiWayConstraint1.drivers`;
+      float $DRvalue[] = `getAttr ("multiWayConstraint1.Offset["+$driver[0]+"].translateOffset")`;
+      //print ($DRvalue[0]+" "+$DRvalue[1]+" "+$DRvalue[2]+"\n");
+      
+      // get the SLAVES
+      print "### SLAVES OFFSET VALUES (from the master):\n";
+      for ($conn=0;$conn<$numOfObjConn;$conn++)
+      {
+        if (($conn !=$driver[0]) && ($conn !=$driver[1]))
+        {
+          print ("Slave "+$conn+":\n");
+          float $value[] = `getAttr ("multiWayConstraint1.Offset["+$conn+"].translateOffset")`;
+          print ("  TRANS: "+$value[0]+" "+$value[1]+" "+$value[2]+"\n");
+          float $value[] = `getAttr ("multiWayConstraint1.Offset["+$conn+"].rotateOffset")`;
+          print ("  ROT: "+$value[0]+" "+$value[1]+" "+$value[2]+"\n");
+        }
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure set Master to a certain position and rotation
+// node that $Master need to be both Translation and Rotation master for both $Trans and $Rot to have effect
+global proc MWsetToValue (string $Master, float $Trans[], float $Rot[])
+{
+  // if the selection is not empty
+  if ($Master != "")
+  {
+    // find the constrain from the selected object
+    $constName = findConstrainFromObject ($Master);
+    if (`objectType $Master` == "multiWayConstraint") $constName = $Master;
+    if ($constName != "")
+    {
+      int $PlugNum = `findPlugFromObject $Master`;
+      
+      if ($PlugNum != -1)
+      {
+        setAttr ($constName+".constrain["+$PlugNum+"].constrainTranslate") $Trans[0] $Trans[1] $Trans[2];
+        setAttr ($constName+".constrain["+$PlugNum+"].constrainRotate") $Rot[0] $Rot[1] $Rot[2];
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure disable the selected object so that is not influenced by the multiWay Constraint anymore
+global proc disableObject (string $object)
+{
+  $constName = findConstrainFromObject ($object);
+  
+  if ($constName != "")
+  {
+    $slaveNum = `getAttr -s ($constName+".drivens")`;
+    $plugnum = findPlugFromObject ($object);
+    
+    for ($n = 0; $n<$slaveNum; $n++)
+    {
+      if (`getAttr ("multiWayConstraint1.drivens["+$n+"]")` == $plugnum) setAttr ("multiWayConstraint1.drivens["+$n+"]") -1;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure return true (1) if the slave object is the parent of one of the masters
+// typically you want to avoid that because it result in double transformations.
+global proc int disableifSlaveParent (string $Masters[], string $slave)
+{
+  if ($slave != "")
+  {
+    string $parents[] = `listRelatives -ad $slave`;
+    
+    for ($parent in $parents)
+    {
+      for ($master in $Masters)
+      {
+        if ($parent == $master) return 1;
+      }
+    }
+  }
+  return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// this procedure set a Master translation to a specific value.
+// This procedure is useful when the translate attribute of a node connected to a MW constraint is connected to an other node as well
+// In this situation, the channel box will not work properly anymore and the 0 position of the node is going to be the position where it became a master
+global proc MWSetValueTrans (string $object, float $values[])
+{
+  int $PlugNum = findPlugFromObject ($object);
+  
+  string $ConstName = findConstrainFromObject ($object);
+  
+  if (($PlugNum != -1) && ($ConstName != ""))
+    setAttr ($ConstName+".constrain["+$PlugNum+"].constrainTranslate") $values[0] $values[1] $values[2];
+}

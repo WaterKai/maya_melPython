@@ -1,0 +1,26 @@
+
+global proc animWindow()
+{
+	string $window;
+	if (`window -exists $window`)
+	{
+		deleteUI -window $window;	
+	}
+	$window = `window -title "AnimTools"
+						     -iconName "tools"`;
+							 
+	rowLayout -numberOfColumns 6
+		-columnWidth6 50 50 50 50 50 50
+					 
+		-columnAttach6 "left" "both" "left" "right" "right" "right"
+		-columnOffset6 3 0 0 0 0 3 ;
+			    	  
+		button -label "getTrans" -width 70 -command "getTrans";
+		button -label "getRots" -width 70 -command "getRots";
+		button -label "setTrans" -width 70 -command "setTrans";
+		button -label "setRots" -width 70 -command "setRots";
+		button -label "setParents" -width 70 -command "setParents";
+		button -label "createMatch" -width 70 -command "createMatch";
+	showWindow $window;
+}
+

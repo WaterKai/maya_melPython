@@ -1,0 +1,24 @@
+global proc getTrans()
+{
+	string $sels[] = `ls -sl`;
+	float $trans[];
+	float $rots[];
+	string $cons[];
+	for ($sel in $sels)
+	{
+		string $matchs[] = `listConnections -s 1 -d 0 -t "transform" $sel`;
+		for ($match in $matchs)
+		{
+			if (`gmatch $match "*match"`)
+				//$trans = `xform -q -ws -t $match`;
+				//xform -ws -t $trans[0] $trans[1] $trans[2] $sel;
+				//$rots = `xform -q -ws -ro $match`;
+				//xform -ws -ro $rots[0] $rots[1] $rots[2] $sel;
+				$cons = `pointConstraint $match $sel`;
+				//select $match;
+		}
+		setKeyframe $sel;
+		delete $cons;
+	}
+
+}

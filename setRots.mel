@@ -1,0 +1,20 @@
+global proc setRots()
+{
+	string $sels[] = `ls -sl`;
+	//string $locs[] = `spaceLocator`;
+	string $cons[] = `orientConstraint $sels[0] $sels[1]`;
+	setKeyframe $sels;
+	delete $cons;
+	for ($i=0; $i<size($sels); $i++)
+	{
+		string $shapes[] = `listRelatives -s $sels[$i]`;
+		for ($shape in $shapes)
+		{
+			if (`objectType $shape`=="locator")
+			{	
+				select $sels[$i];
+				timeSliderClearKey;
+			}
+		}
+	}
+}

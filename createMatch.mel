@@ -1,0 +1,14 @@
+global proc createMatch()
+{
+    string $sels[0];
+    $sels = `ls -sl`;
+    for ($sel in $sels)
+    {
+        $match = `group -em -w -n ($sel+"_match")`;
+        $cons = `parentConstraint -w 1 $sel $match`;
+        delete $cons;
+        if (!`attributeQuery -ex -n $sel "match_obj"`)
+            addAttr -ln "match_obj" -at message $sel;    
+        connectAttr -f ($match+".message") ($sel+".match_obj");
+}
+}

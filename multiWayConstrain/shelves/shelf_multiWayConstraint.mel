@@ -1,0 +1,312 @@
+global proc shelf_multiWayConstraint () {
+    global string $gBuffStr;
+    global string $gBuffStr0;
+    global string $gBuffStr1;
+
+
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Use this interface to create a Multi-Way Constraint" 
+        -enableBackground 0
+        -align "center" 
+        -label "Use this interface to create a Multi-Way Constraint" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "multiWayConstraintUI.xpm" 
+        -image1 "multiWayConstraintUI.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "source multiWayConstraintUI;\rmultiWayConstraintUI();" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Get the list of Masters from an object connected to a MW constraint or from the constraint itself" 
+        -enableBackground 0
+        -align "center" 
+        -label "Get the list of Masters from an object connected to a MW constraint or from the constraint itself" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "listDrivers.xpm" 
+        -image1 "listDrivers.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "source multiWayConstraint;\r\n$sel = `ls -sl`;\r\nMWgetMasters ($sel[0]);" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Get the list of Slaves from an object connected to a MW constraint or from the constraint itself" 
+        -enableBackground 0
+        -align "center" 
+        -label "Get the list of Slaves from an object connected to a MW constraint or from the constraint itself" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "listDrivenNodes.xpm" 
+        -image1 "listDrivenNodes.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "source multiWayConstraint;\r$sel = `ls -sl`;\rMWgetSlaves ($sel[0]);" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Get the offset of the Slaves from an object connected to a MW constraint or from the constraint itself" 
+        -enableBackground 0
+        -align "center" 
+        -label "Get the offset of the Slaves from an object connected to a MW constraint or from the constraint itself" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "listOffsets.xpm" 
+        -image1 "listOffsets.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "source multiWayConstraint;\r$sel = `ls -sl`;\rMWprintOffset ($sel[0]);" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Set keyframes to the objects attached to a MW constraint" 
+        -enableBackground 0
+        -align "center" 
+        -label "Set keyframes to the objects attached to a MW constraint" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "setMWKeyframe.xpm" 
+        -image1 "setMWKeyframe.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "source multiWayConstraint;\r$sel = `ls -sl`;\rsetMultiWayKeyframe ($sel[0], 1, 1);" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "The selected object is going to be the new driver of a MW Constraint" 
+        -enableBackground 0
+        -align "center" 
+        -label "The selected object is going to be the new driver of a MW Constraint" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "setNewMWDriver.xpm" 
+        -image1 "setNewMWDriver.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "source multiWayConstraint;\r$sel = `ls -sl`;\rmultiWayConstraint ($sel[0], $sel[0], {});" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Turn ON autoSwitch. If the new selected object is part of a MW Constrain it becomes the Rot and Trans Master" 
+        -enableBackground 0
+        -align "center" 
+        -label "Turn ON autoSwitch. If the new selected object is part of a MW Constrain it becomes the Rot and Trans Master" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "autoSwitchON.xpm" 
+        -image1 "autoSwitchON.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "//MWcAutoSwitch\r\n//Author: Andrea Maiolo, Tim Naylor\r\n\r\nglobal int $MWcjobNum;\r\nglobal int $MWcjobExists;\r\n\r\nif ($MWcjobExists == 0)\r\n{\r\n$MWcjobNum = `scriptJob -event \"SelectionChanged\"  MWcAutoSwitch`;\r\n$MWcjobExists = 1;\r\n}\r\n\r\n\r\n\r\nglobal proc int MWcAutoSwitch ()\r\n{\r\n  global int $MWcjobNum;\r\n  $sel = `ls -sl`;\r\n  // if the selection is not empty or the selected object is attached to a multiWay Constraint\r\n  if ((size($sel) != 0) && (findConstrainFromObject ($sel[0]) != \"\"))\r\n  {\r\n    // set the current object as a translation and rotation Master\r\n    multiWayConstraint ($sel[0], $sel[0], {});\r\n  }\r\n  \r\n  //return the script job number\r\n  return $MWcjobNum;\r\n}\r\n" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Turn OFF autoSwitch. If the new selected object is part of a MW Constrain it becomes the Rot and Trans Master" 
+        -enableBackground 0
+        -align "center" 
+        -label "Turn OFF autoSwitch. If the new selected object is part of a MW Constrain it becomes the Rot and Trans Master" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "autoSwitchOFF.xpm" 
+        -image1 "autoSwitchOFF.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "global int $MWcjobNum;\r\nglobal int $MWcjobExists;\r\nif ((`scriptJob -ex $MWcjobNum`) && ($MWcjobNum != 0) && ($MWcjobExists ==1)) \r\n{\r\nscriptJob -kill $MWcjobNum -force;\r\n$MWcjobExists = 0;\r\n}" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Display relationships among nodes in your scene graphically" 
+        -enableBackground 0
+        -align "center" 
+        -label "Node Editor" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -imageOverlayLabel "NE" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "menuIconWindow.png" 
+        -image1 "menuIconWindow.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "NodeEditorWindow" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Edit animation curves" 
+        -enableBackground 0
+        -align "center" 
+        -label "Graph Editor" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -imageOverlayLabel "GE" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "menuIconWindow.png" 
+        -image1 "menuIconWindow.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "GraphEditor" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Display and edit relationships among nodes in your scene graphically using the hierarchical view" 
+        -enableBackground 0
+        -align "center" 
+        -label "Hypergraph: Hierarchy" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -imageOverlayLabel "Hgph" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "menuIconWindow.png" 
+        -image1 "menuIconWindow.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "HypergraphHierarchyWindow" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Customize the joint scale" 
+        -enableBackground 0
+        -align "center" 
+        -label "Joint Size..." 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -imageOverlayLabel "JS" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "menuIconDisplay.png" 
+        -image1 "menuIconDisplay.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "jdsWin" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+
+} 

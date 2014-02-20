@@ -1,0 +1,3 @@
+string $getPanel1 = `getPanel -underPointer`;
+
+modelEditor -e -nurbsCurves off $getPanel1;

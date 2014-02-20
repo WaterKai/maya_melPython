@@ -1,0 +1,418 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"o",
+				"obj2	param"
+			],
+			[
+				"create",
+				"createNode	function"
+			],
+			[
+				"el",
+				"else	keyword"
+			],
+			[
+				"list",
+				"listargs	statement"
+			],
+			[
+				"text",
+				"textFieldButtonGrp	function"
+			],
+			[
+				"test",
+				"testPrint1	function"
+			],
+			[
+				"crea",
+				"createNode	function"
+			],
+			[
+				"win",
+				"window	function"
+			],
+			[
+				"textFi",
+				"textFieldGrp	function"
+			],
+			[
+				"textf",
+				"textFieldGrp	function"
+			],
+			[
+				"bl",
+				"blender"
+			],
+			[
+				"textF",
+				"textFieldButtonGrp	function"
+			],
+			[
+				"s",
+				"solution"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"contents": "import maya.cmds as mc\n\ndef connectBlendUI():\n\n	win = \"connectBlendUI\"\n	if mc.window(win, exists=True):\n		mc.deleteUI(win)\n\n\n	mc.window(win, title=\"Connect Blend\")\n	mc.columnLayout(adj=True)\n\n	tfg1 = mc.textFieldButtonGrp(l=\"Object 1 (blender=0):\",bl=\"Load Sel\")\n	tfg2 = mc.textFieldButtonGrp(l=\"Object 2 (blender=1):\",bl=\"Load Sel\")\n\n	mc.text(l=\"\")\n	tfg3 = mc.textFieldButtonGrp(l=\"Target Object:\",bl=\"Load Sel\")\n	tfg5 = mc.textFieldGrp(l=\"Attribute:\")\n	mc.text(l=\"\")\n	tfg4 = mc.textFieldGrp(l=\"Driver (optinal):\")\n\n	mc.button(l=\"Go\")\n	tfg6 = mc.textFieldButtonGrp(tfg1,e=True,bc='loadSelIntoTFBG(arg=\"'+tfg1+'\")')\n	mc.showWindow(win)\n\ndef loadSelIntoTFBG(arg=None):\n	objs = mc.ls(sl=True)\n\n	if len(objs)>0:\n		mc.textFieldButtonGrp(arg,e=True,tx=objs[0])\n	\n	#print mc.textFieldButtonGrp(tfbgTMP,q=True,tx=True)\n\nloadSelIntoTFBG(tfg1)	\ndef prepConnectBlend(*args):\n	obj1 = mc.textFieldButtonGrp(tfbg1,tx=True)\n	obj2 = mc.textFieldButtonGrp(tfbg2,tx=True)\n	target = mc.textFieldButtonGrp(tfbg3,tx=True)\n	drivers = mc.textFieldButtonGrp(tfbg4,tx=True)\n	attribute = mc.textFieldButtonGrp(tfg5,tx=True)		",
+			"file": "ex2.py",
+			"file_size": 1129,
+			"file_write_time": 130368611447643954,
+			"settings":
+			{
+				"buffer_size": 1100,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "import maya.cmds as mc\nimport re\ndef connectBlend(obj1=None,obj2=None,target=None,attr=None,drivers=None):\n	#test createNode is ok!\n	\"\"\"target,attr = 'a','b'\n	bc = mc.createNode('blendColors',n='%s_%s_blend'%(target,attr))\n	print bc\n	print mc.ls(et='blendColors')\n	mc.delete(bc)\n	\"\"\"\n	bc = mc.createNode('blendColors',n='%s_%s_blend'%(target,attr))\n	mc.connectAttr('%s.%s'%(obj1,attr), '%s.color2'%bc)\n	mc.connectAttr('%s.%s'%(obj2,attr), '%s.color1'%bc)\n\n	mc.connectAttr('%s.output'%bc, '%s.%s'%(target,attr))\n\n	if drivers:\n		if not re.match(r'([a-zA-Z0-9])+\\.([a-zA-Z]+)', drivers):\n			mc.error(\"Driver must be object.attribute.  exiting.\")\n\n		mc.connectAttr(drivers, '%s.blender'%bc)\n\n\n\nconnectBlend(obj1='aa',obj2='bb',target='cc',attr='tz',drivers='dd')		\n\n\n",
+			"file": "ex4.py",
+			"file_size": 1052,
+			"file_write_time": 130371205038849705,
+			"settings":
+			{
+				"buffer_size": 763,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "/E/maya/rig/bohdon-dilloTools-6b45f4a/scripts/boTSMTools.mel",
+			"settings":
+			{
+				"buffer_size": 43382,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/E/maya/rig/bohdon-dilloTools-6b45f4a/scripts/dwCreateIKFKArm.mel",
+			"settings":
+			{
+				"buffer_size": 37690,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "Packages/Python/Python.sublime-build",
+	"command_palette":
+	{
+		"height": 81.0,
+		"selected_items":
+		[
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"ins",
+				"Package Control: Install Package"
+			],
+			[
+				"inst",
+				"Package Control: Install Package"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"package control install",
+				"Package Control: Install Package"
+			],
+			[
+				"",
+				"Preferences: Maya Settings"
+			],
+			[
+				"in",
+				"Package Control: Install Package"
+			],
+			[
+				"intall",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 400.0
+	},
+	"console":
+	{
+		"height": 125.0
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/C/Users/kai/Documents/maya/2013-x64/scripts/userSetup.py",
+		"/C/Users/kai/AppData/Roaming/Sublime Text 2/Packages/User/Preferences.sublime-settings",
+		"/C/Users/kai/AppData/Roaming/Sublime Text 2/Packages/User/Python.sublime-settings",
+		"/C/Users/kai/AppData/Roaming/Sublime Text 2/Packages/User/Default (Windows).sublime-keymap",
+		"/E/maya/rig/bohdon-dilloTools-6b45f4a/tools.py",
+		"/E/maya/rig/bohdon-dilloTools-6b45f4a/userPaths.py",
+		"/E/maya/rig/bohdon-dilloTools-6b45f4a/__init__.py",
+		"/F/快盘/Maya/mel/js_connectBlend.mel",
+		"/F/快盘/Maya/mel/js_connectBlendUI.mel",
+		"/C/Python27/ex/ex24.py",
+		"/C/Users/kai/AppData/Roaming/Sublime Text 2/Packages/Terminal/Terminal.sublime-settings",
+		"/C/Python27/ex/ex22.pyc",
+		"/C/Users/kai/AppData/Roaming/Sublime Text 2/Packages/Default/Default (Windows).sublime-keymap",
+		"/C/Users/kai/AppData/Roaming/Sublime Text 2/Packages/MayaSublime/MayaSublime.sublime-settings",
+		"/C/Users/kai/Documents/maya/2013-x64/scripts/ex1.mel",
+		"/C/Users/kai/AppData/Roaming/Sublime Text 2/Packages/Jedi - Python autocompletion/sublime_jedi.sublime-settings",
+		"/C/Users/kai/AppData/Roaming/Sublime Text 2/Packages/Jedi - Python autocompletion/Completion Rules.tmPreferences",
+		"/F/快盘/Maya/mel/js_addHalfJoint.mel",
+		"/C/Users/kai/Documents/maya/2013-x64/scripts/MayaPython.sublime-project",
+		"/C/Users/kai/Documents/sublime/autocomplete.sublime-project",
+		"/C/Users/kai/AppData/Roaming/Sublime Text 2/Packages/Maya/Maya.sublime-settings",
+		"/C/Users/kai/Documents/maya/2013-x64/scripts/ex2.py",
+		"/C/Python27/ex/ex18.py",
+		"/C/Python27/ex/eight_queens.py",
+		"/C/Users/kai/Documents/maya/scripts/em1.mel",
+		"/C/Users/kai/AppData/Roaming/Sublime Text 2/Packages/MayaSublime/MayaSublime.py",
+		"/C/Users/kai/AppData/Roaming/Sublime Text 2/Packages/MayaSublime/README.md",
+		"/C/Python27/ex/ex22.py",
+		"/C/Users/kai/Documents/maya/拍屏工具s_SGbatchPlayBlast.mel",
+		"/C/Python27/ex/ex20.py",
+		"/C/Python27/ex/ex19.py",
+		"/C/Users/kai/Documents/sublime/test.py",
+		"/C/Users/kai/AppData/Roaming/Sublime Text 2/Packages/Python/Python.sublime-build",
+		"/C/Users/kai/Desktop/RTL8188C_8192C_USB_linux_v4.0.2_9000.20130911/driver/rtl8188C_8192C_usb_linux_v4.0.2_9000.20130911/os_dep/linux/usb_intf.c",
+		"/C/Users/kai/AppData/Roaming/Sublime Text 2/Packages/Default/Preferences.sublime-settings",
+		"/E/maya/rig/Maya Programming Pack 12 Trainings For MEL  Python  API ( the real deal)/3_AUTODESK.MAYA.TECHNIQUES.BI-DIRECTIONAL.CONSTRAINING.PART.I.BREAKING.THE.LINEARITY.OF.DEPENDENCIES/Files/BiDirectionalConstraining1/support_files/source_code/pluginMain.cpp",
+		"/E/maya/rig/MAYAPR~1/3_AUTO~1.DEP/Files/BIDIRE~1/SUPPOR~1/SOURCE~1/multiWayConstraint.sln",
+		"/E/maya/rig/MAYAPR~1/3_AUTO~1.DEP/Files/BIDIRE~1/SUPPOR~1/SOURCE~1/multiWayConstraint.h",
+		"/E/maya/rig/multiWayConstrain/Plugin_Autodesk_Maya_2013x64/multiWayConstraint.mll",
+		"/E/maya/rig/multiWayConstrain/scripts/multiWayConstraint.mel"
+	],
+	"find":
+	{
+		"height": 34.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+			""
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"tfg_a",
+			"tag",
+			"panel",
+			"switch",
+			"tab"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"tfg9"
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 3,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "ex2.py",
+					"settings":
+					{
+						"buffer_size": 1100,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1098,
+								1098
+							]
+						],
+						"settings":
+						{
+							"is_preview": true,
+							"origin_encoding": "ASCII",
+							"syntax": "Packages/Python/Python.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 90.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "ex4.py",
+					"settings":
+					{
+						"buffer_size": 763,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								759,
+								759
+							]
+						],
+						"settings":
+						{
+							"is_preview": true,
+							"origin_encoding": "ASCII",
+							"syntax": "Packages/Python/Python.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/E/maya/rig/bohdon-dilloTools-6b45f4a/scripts/boTSMTools.mel",
+					"settings":
+					{
+						"buffer_size": 43382,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								33548,
+								33548
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/MayaSublime/MEL.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 2052.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "/E/maya/rig/bohdon-dilloTools-6b45f4a/scripts/dwCreateIKFKArm.mel",
+					"settings":
+					{
+						"buffer_size": 37690,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								822,
+								822
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/MayaSublime/MEL.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 2160.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 0.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 100.0
+	},
+	"replace":
+	{
+		"height": 0.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 150.0,
+	"status_bar_visible": true
+}

@@ -1,0 +1,262 @@
+global proc multiWayConstraintUI()
+{
+   // CREATE THE WINDOW
+   string $multiWayConstraintWIN = "multiWayConstraintWIN";
+   int $w = 400;
+   int $h = 350;
+   if (`window -q -ex $multiWayConstraintWIN` == 1)
+      deleteUI -wnd $multiWayConstraintWIN;
+   
+   window -wh $w $h -s 1 -t "Create Multi-Way Constraint" $multiWayConstraintWIN;
+   
+   // CREATE THE MAIN LAYOUT OF THE WINDOW
+   // THIS CONFIGURATION HAS A PANE LAYOUT WITH THREE PANES 
+   // THE TOP PANE FOR DRIVER OBJECTS AND THE MIDDLE FOR DRIVEN OBJECTS
+   // THE BOTTOM PANE HAS THE CREATE CONSTRAINT AND CANCEL BUTTONS
+   // BOTH PANE'S HAVE AN OVERALL FORM LAYOUT PARENT
+   //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   string $multiWayPANE = `paneLayout -p $multiWayConstraintWIN -cn "horizontal3" 
+                                             -ps 1 100 30 -ps 2 100 60 -ps 3 100 10 multiWayPANE`;
+      string $topPaneFORM = `formLayout -p $multiWayPANE topPaneFL`;
+      string $midPaneFORM = `formLayout -p $multiWayPANE midPaneFL`;
+      string $btmPaneFORM = `formLayout -p $multiWayPANE btmPaneFL`;
+   
+      // TOP PANE
+      // BUILD TWO FRAME LAYOUTS AS PARENT LAYOUTS FOR BOTH TRANSLATION AND ROTATION
+      // EACH FRAME LAYOUT WILL HAVE A CHILD FORM LAYOUT WHICH HOLDS THE FOLLOWING:
+      // A TEXT FIELD GROUP FOR THE TRANSFORMATION TYPE (TRANSLATION OR ROTATION)
+      // THE TEXT FIELD GROUP LISTS THE OBJECT TO BE USED AS THE DRIVER
+      // THE TEXT FIELD GROUP HAS A BUTTON FOR GRABBING THE CURRENTLY SELECTED ITEM AND FILLING IN THE TEXT FIELD 
+      // AS THE DRIVER OBJECT FOR THAT PARTICULAR TRANSFORMATION TYPE
+      //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      // TRANSLATION
+      //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      string $translationFL = `frameLayout -p $topPaneFORM -cl 0 -lv 0 -bv 1 -bs "in" translationFL`;
+         string $translationFORM = `formLayout -p $translationFL translationFORM`;
+         
+         // TRANSLATION TEXT  FIELD GROUP
+         string $translationCmd = "string $selected[] = `ls -sl`; if (`size($selected)` == 1) textFieldGrp -e -tx $selected[0] translationTFBG;\
+                                                  else confirmDialog -t \"ERROR\" -m \"Please select one item\";";
+         string $translationTFBG = `textFieldButtonGrp -p $translationFORM -label "Translation Driver:" -cw 1 120 -cw 3 80 
+                                       -bc $translationCmd -co3 0 8 5 -cal 1 "center" -ct3 "left" "right" "both" -bl "Grab Selected" -adj 2 translationTFBG`;
+                                       
+         popupMenu -p $translationTFBG;
+            menuItem -l "Clear Text" -c "textFieldButtonGrp -e -tx \"\" translationTFBG";
+            
+         // EDIT THE TRANSLATION FORM LAYOUT
+         formLayout -edit
+            -ap $translationTFBG  "top"        0  25
+            -ap $translationTFBG  "bottom"   0  95
+            -ap $translationTFBG  "left"        0  0
+            -ap $translationTFBG  "right"      0  100
+         $translationFORM;
+            
+      
+      // ROTATION
+      //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      string $rotationFL = `frameLayout -p $topPaneFORM -cl 0 -lv 0 -bv 1 -bs "in" rotationFL`;
+         string $rotationFORM = `formLayout -p $rotationFL rotationFORM`;
+         
+            // ROTATION TEXT  FIELD GROUP
+            string $rotationCmd = "string $selected[] = `ls -sl`; if (`size($selected)` == 1) textFieldGrp -e -tx $selected[0] rotationTFBG;\
+                                                else confirmDialog -t \"ERROR\" -m \"Please select one item\";";
+            string $rotationTFBG = `textFieldButtonGrp -p $rotationFORM -label "Rotation Driver:" -cw 1 120 -cw 3 80 -bc $rotationCmd
+                                                -co3 0 8 5 -cal 1 "center" -ct3 "left" "right" "both" -bl "Grab Selected" -adj 2 rotationTFBG`;   
+                                                
+         popupMenu -p $rotationTFBG;
+            menuItem -l "Clear Text" -c "textFieldButtonGrp -e -tx \"\" rotationTFBG";   
+            
+         // EDIT THE ROTATION FORM LAYOUT
+         formLayout -edit
+            -ap $rotationTFBG  "top"        0  25
+            -ap $rotationTFBG  "bottom"   0  95
+            -ap $rotationTFBG  "left"        0  0
+            -ap $rotationTFBG  "right"      0  100
+         $rotationFORM;
+         
+      // EDIT THE TOP PANE'S FORM LAYOUT
+      formLayout -edit
+         -ap $translationFL  "top"        0  0
+         -ap $translationFL  "bottom"   0  50
+         -ap $translationFL  "left"        0  0
+         -ap $translationFL  "right"      0  100      
+   
+         -ap $rotationFL      "top"        0  50
+         -ap $rotationFL      "bottom"   0  100
+         -ap $rotationFL      "left"        0  0
+         -ap $rotationFL      "right"      0  100
+      $topPaneFORM;
+            
+      // MIDDLE PANE
+      // THIS PANE HAS AN OVERALL FRAME LAYOUT AS THE PARENT WITH THE FOLLOWING STRUCTURE UNDERNEATH:
+      // TO THE LEFT IS A SCROLL LAYOUT CONTAINING THE LIST OF DRIVEN OBJECTS
+      // ON THE RIGHT IS THE SAME "GRAB SELECTED" BUTTON AS FOUND IN THE TOP PANE
+      // THE POSITIONING OF THE SCROLL LAYOUT AND GRAB SELECTED BUTTON IS CONTROLLED BY A FORM LAYOUT
+      //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      string $drivenObjectsFL = `frameLayout -p $midPaneFORM -cl 0 -lv 1 -l "Driven Objects" -fn "smallPlainLabelFont" 
+                                                -bv 1 -bs "etchedIn" drivenObjectsFL`;
+                                                
+         // THE FORM LAYOUT HOLDING THE SCROLL LAYOUT AND GRAB SELECTED BUTTON
+         string $drivenObjectsFORM = `formLayout -p $drivenObjectsFL $drivenObjectsFORM`;
+         
+            // THE SCROLL LAYOUT
+            string $drivenObjectTSL = `textScrollList -p $drivenObjectsFORM -ams 1 drivenObjectsTSL`;
+            
+            // THE SELECTION BUTTONS
+            // GRAB SELECTED
+            string $grabDrivenListB = `button -p $drivenObjectsFORM -l "Grab Selected" -w 80 -c "addItemToDrivenList()" grabDrivenListB`;
+            
+            // REMOVE ITEM
+            string $removeDrivenB = `button -p $drivenObjectsFORM -l "Remove Item" -c "removeItemFromDrivenList()" -w 80 removeDrivenListB`;
+            string $removeAllB = `button -p $drivenObjectsFORM -l "Remove All" -c "textScrollList -e -ra drivenObjectsTSL;" -w 80 removeAllListB`;
+            
+         // EDIT THE DRIVEN OBJECTS FORM LAYOUT
+         formLayout -edit 
+            -ap $drivenObjectTSL  "top"        0  0
+            -ap $drivenObjectTSL  "bottom"   0  100
+            -ap $drivenObjectTSL  "left"        0  0
+            -ap $drivenObjectTSL  "right"      0  75      
+      
+            -ap $grabDrivenListB  "top"        0  0
+            -ap $grabDrivenListB  "bottom"   0  15
+            -ac $grabDrivenListB  "left"        7  $drivenObjectTSL
+            -ap $grabDrivenListB  "right"      0  99
+            
+            -ac $removeDrivenB    "top"        0  $grabDrivenListB
+            -ap $removeDrivenB    "bottom"   0  30
+            -ac $removeDrivenB    "left"        7  $drivenObjectTSL
+            -ap $removeDrivenB    "right"      0  99 
+            
+            -ac $removeAllB    "top"        0  $removeDrivenB
+            -ap $removeAllB    "bottom"   0  45
+            -ac $removeAllB    "left"        7  $drivenObjectTSL
+            -ap $removeAllB    "right"      0  99
+         $drivenObjectsFORM;      
+      
+      // EDIT THE MIDDLE PANE'S FORM LAYOUT
+      formLayout -edit
+         -ap $drivenObjectsFL "top"        0  1
+         -ap $drivenObjectsFL "bottom"   0  99
+         -ap $drivenObjectsFL "left"        0  1
+         -ap $drivenObjectsFL "right"      0  99
+      $midPaneFORM;
+      
+      // BOTTOM PANE
+      string $createCmd = "createMultiWayConstraintFromUI(); deleteUI "+$multiWayConstraintWIN+";";
+      string $cancelCmd = ("deleteUI "+$multiWayConstraintWIN+";");
+      string $createConstraintB = `button -p $btmPaneFORM -label "Create Multi-Way Constraint" -c $createCmd createConstraintB`;
+      string $cancelB = `button -p $btmPaneFORM -label "Cancel" -c $cancelCmd cancelB`;
+      
+      // EDIT THE BOTTOM PANE'S FORM LAYOUT
+      formLayout -edit
+         -ap $createConstraintB "top"        0  10
+         -ap $createConstraintB "bottom"   0  90
+         -ap $createConstraintB "left"        0  1
+         -ap $createConstraintB "right"      0  65
+         
+         -ap $cancelB                "top"        0  10
+         -ap $cancelB                "bottom"   0  90
+         -ap $cancelB                "left"        0  67
+         -ap $cancelB                "right"      0  99         
+      $btmPaneFORM;      
+      
+         
+         
+   showWindow $multiWayConstraintWIN;
+   window -e -wh $w $h $multiWayConstraintWIN;
+}
+
+
+
+/*********************************************************************************************************************************
+Function:
+
+
+Parameters:
+
+
+Returns:
+
+
+See Also <printline>
+*********************************************************************************************************************************/
+global proc addItemToDrivenList()
+{
+   
+   // GET THE CURRENTLY SELECTED ITEMS
+   string $selected[] = `ls -sl`;
+   
+   // GET THE LIST OF ITEMS IN THE DRIVEN SECTION OF THE UI
+   string $drivenList[] = `textScrollList -q -ai drivenObjectsTSL`;
+
+   // USE THE stringArrayRemoveExact SCRIPT TO REMOVE THE DRIVEN LIST FROM THE SELECTED LIST TO RETURN ONLY THE UNIQUE
+   // ITEMS THAT NEED TO BE ADDED TO THE UI
+   string $items2Add[];
+   if (`size($drivenList)` > 0)
+      $items2Add = stringArrayRemoveExact($drivenList, $selected);
+   else
+      $items2Add = $selected;
+   
+   // ADD THE UNIQUE ITEMS TO THE TEXT SCROLL LIST
+   for ($item in $items2Add){
+      textScrollList -e -a $item drivenObjectsTSL;
+   }
+}
+
+
+
+/*********************************************************************************************************************************
+Function:
+
+
+Parameters:
+
+
+Returns:
+
+
+See Also <printline>
+*********************************************************************************************************************************/
+global proc removeItemFromDrivenList()
+{
+   
+   // GET THE LIST OF ITEMS SELECTED IN THE TEXT SCROLL LIST
+   string $items2Remove[] = `textScrollList -q -si drivenObjectsTSL`;
+   
+   // FOR EACH ITEM FOUND REMOVE IT FROM THE LIST
+   for ($item in $items2Remove){
+      textScrollList -e -ri $item drivenObjectsTSL;
+   }
+}
+
+
+
+/*********************************************************************************************************************************
+Function:
+
+
+Parameters:
+
+
+Returns:
+
+
+See Also <printline>
+*********************************************************************************************************************************/
+global proc createMultiWayConstraintFromUI()
+{
+   // BEFORE CALLING THE PROCEDURE TO ACTUALLY CREATE THE MULTI-WAY CONSTRAINT GET THE INFORMATION FROM THE UI
+   // THEN PASS THAT INFO (DRIVERS, DRIVEN NODES) TO THE CREATION PROC
+   //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   // GET THE TRANSLATION DRIVER
+   string $transDriver = `textFieldButtonGrp - q -tx translationTFBG`;
+   
+   // GET THE ROTATION DRIVER
+   string $rotDriver = `textFieldButtonGrp -q -tx rotationTFBG`;
+   
+   // GET THE DRIVEN NODE(S)
+   string $drivenNodes[] = `textScrollList -q -ai drivenObjectsTSL`;
+   
+   // NOW CREATE THE CONSTRAINT
+   multiWayConstraint($transDriver, $rotDriver, $drivenNodes);
+}
