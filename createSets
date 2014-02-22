@@ -1,1 +1,25 @@
-def 
+def IKFK(ikfkswitch=none,attr=none):
+	import maya.cmds as mc
+	import maya.mel as mel
+
+	ikfkswitch = 'stewie_ct_L_heel'
+	#get channelBox selected attr
+	attr = 'ikHandle'
+	#print attr
+	#sels = mc.ls(sl=True)
+	print '%s.%s'%(ikfkswitch,attr)
+	#get attr value
+	val = mc.getAttr('%s.%s'%(ikfkswitch,attr))
+	#print val
+	if (val==0):
+		#print 'selected'
+		mc.select('stewie_ac_L_foot')
+		#print mel.eval('match "a+b+" "abbcc"')
+		mel.eval('getTrans()')
+		mel.eval('getRots()')
+		mc.setAttr('%s.%s'%(ikfkswitch,attr),1)
+	elif (val==1):
+		mc.select('stewie_fk_L_upleg','stewie_fk_L_loleg','stewie_fk_L_foot')
+		for i in mc.ls(sl=True):
+			mel.eval('getRots()')
+		mc.setAttr('%s.%s'%(ikfkswitch,attr),0)
