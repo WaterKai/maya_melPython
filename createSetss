@@ -1,0 +1,15 @@
+import maya.cmds as mc
+
+def createSets(setName=None):
+	#judge the sets exists?
+	if not mc.objExists(setName):
+		mc.sets(n=setName)
+
+	else:
+		#what things to add
+		seladds = mc.ls(sl=True)
+		#select the sets
+		mc.select(setName,ne=True)
+		selsets = mc.ls(sl=True)
+		#add things to sets
+		mc.sets(seladds,add=selsets[0])
