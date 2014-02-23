@@ -1,7 +1,6 @@
 def IKFK(ikfkswitch=none,attr=none):
 	import maya.cmds as mc
 	import maya.mel as mel
-
 	ikfkswitch = 'stewie_ct_L_heel'
 	#get channelBox selected attr
 	attr = 'ikHandle'
